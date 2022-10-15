@@ -1,0 +1,153 @@
+extends layout
+
+block pageTitle
+    ="LLLC Keno"
+
+block content
+    #board.bg-red(style="height: 100vh;")
+        .row(style="height: 5vh;")
+        .row(style="height: 10vh;")
+            .col-1
+            each num in Array.apply(null, {length: 10}).map((n, idx) => (idx + 1))
+                .col-1.border.border-secondary.bg-white.keno-number(data-number=num)
+                    span
+                        =num
+            .col-1
+        .row(style="height: 10vh;")
+            .col-1
+            each num in Array.apply(null, {length: 10}).map((n, idx) => 10 + (idx + 1))
+                .col-1.border.border-secondary.bg-white.keno-number(data-number=num)
+                    span
+                        =num
+            .col-1
+        .row(style="height: 10vh;")
+            .col-1
+            each num in Array.apply(null, {length: 10}).map((n, idx) => 20 + (idx + 1))
+                .col-1.border.border-secondary.bg-white.keno-number(data-number=num)
+                    span
+                        =num
+            .col-1
+        .row(style="height: 10vh;")
+            .col-1
+            each num in Array.apply(null, {length: 10}).map((n, idx) => 30 + (idx + 1))
+                .col-1.border.border-secondary.bg-white.keno-number(data-number=num)
+                    span
+                        =num
+            .col-1
+        .row.mt-1(style="height: 10vh;")
+            .col-1
+            .col-3.bg-gradient
+                img.d-block.mt-1(src="/images/keno-logo.png" style="height: 8vh;")
+            .col-3.bg-gradient
+                small Current Draw 
+                h3#current_draw
+            .col-4.text-right.bg-gradient
+                small Next Draw 
+                h3#next_draw 3:30
+            .col-1
+        .row(style="height: 10vh;")
+            .col-1
+            each num in Array.apply(null, {length: 10}).map((n, idx) => 40 + (idx + 1))
+                .col-1.border.border-secondary.bg-white.keno-number(data-number=num)
+                    span
+                        =num
+            .col-1
+        .row(style="height: 10vh;")
+            .col-1
+            each num in Array.apply(null, {length: 10}).map((n, idx) => 50 + (idx + 1))
+                .col-1.border.border-secondary.bg-white.keno-number(data-number=num)
+                    span
+                        =num
+            .col-1
+        .row(style="height: 10vh;")
+            .col-1
+            each num in Array.apply(null, {length: 10}).map((n, idx) => 60 + (idx + 1))
+                .col-1.border.border-secondary.bg-white.keno-number(data-number=num)
+                    span
+                        =num
+            .col-1
+        .row(style="height: 10vh;")
+            .col-1
+            each num in Array.apply(null, {length: 10}).map((n, idx) => 70 + (idx + 1))
+                .col-1.border.border-secondary.bg-white.keno-number(data-number=num)
+                    span
+                        =num
+            .col-1
+        .row(style="height: 5vh;")
+    #ball.h-100.w-100.position-absolute.d-none(style="top: 0; left: 0;")
+        span.d-block.bg-white.border.border-danger.text-danger.text-center.font-weight-bold(style="height: 80vh; width: 80vh; margin-top: 10vh; margin-left: calc(50vw - 40vh); border-radius: 50%; border-width: 20px !important; font-size: 50vh;")
+    script.
+        var next_draw_counter = 210000;
+        var draw_counter = 30000;
+
+        function setCurrentDraw() {
+            var current_draw = Math.floor(Date.now() / 1000);
+            document.querySelector('#current_draw').innerText = current_draw;
+        }
+
+        function draw() {
+            var usedIndexes = new Set();
+            var winners = Array.apply(null, {length: 10}).map(n => {
+                return getUniqueRandomNumber(80, 1);
+            });
+            console.log(winners);
+            clearChosen();
+            setCurrentDraw();
+
+            winners.map((n, idx) => {
+                setTimeout(function() {
+                    var cell = document.querySelector('div[data-number="' + n + '"]');
+                    var ball = document.querySelector('#ball');
+                    cell.classList.add("chosen");
+                    ball.querySelector('span').innerText = n;
+                    ball.classList.remove('d-none');
+                    if (idx === 9) {
+                        // Last One
+                        setTimeout(function() {
+                            ball.classList.add('d-none');
+                        }, 2000);
+                    }
+                }, idx * 2000);
+            });
+
+            function getUniqueRandomNumber(max, min = 0) {
+                var newNumber = Math.floor(Math.random() * (max - min) + min);
+                if (usedIndexes.has(newNumber)) {
+                    return getUniqueRandomNumber(max, min);
+                } else { 
+                    usedIndexes.add(newNumber);
+                    return newNumber;
+                }
+            }
+
+        }
+
+        function clearChosen() {
+            var list = document.querySelectorAll('.chosen');
+            [...list].forEach(el => {
+                el.classList.remove("chosen");
+            })
+        }
+        
+        // Next Draw Timer
+        setInterval(function() {
+            if (next_draw_counter === 0) {
+                //- console.log(draw_counter);
+                if (draw_counter === 0) {
+                    // Start the next_draw counter again
+                    next_draw_counter = 210000;
+                    draw_counter = 30000;
+                } else if (draw_counter === 30000) {
+                    // Run the draw command
+                    draw();
+                    draw_counter = draw_counter - 1000;
+                } else {
+                    draw_counter = draw_counter - 1000;
+                }
+            } else {
+                next_draw_counter = next_draw_counter - 1000;
+            }
+            //- console.log(next_draw_counter);
+            var seconds = (next_draw_counter / 1000) % 60;
+            document.querySelector('#next_draw').innerText = `${Math.floor((next_draw_counter / 1000) / 60)}:${seconds < 10 ? "0" + seconds : seconds}`;
+        }, 1000);

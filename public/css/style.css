@@ -1,0 +1,39 @@
+body {
+    font-family: "Open Sans", sans-serif !important;
+}
+
+.keno-number {
+    text-align: center;
+    font-weight: 800;
+}
+
+.keno-number span {
+    display: block;
+    margin: auto;
+    font-size: 2rem;
+    margin-top: 0.5rem;
+}
+
+.chosen {
+    background-color: #3F86F5 !important;
+    color: #fff;
+}
+
+.bg-red {
+    background-color: #B32217;
+}
+
+.bg-gradient {
+    background: rgb(176,176,176);
+    background: linear-gradient(0deg, rgba(176,176,176,1) 0%, rgba(242,242,242,1) 100%);
+}
+
+.fader {
+    opacity: 1;
+    animation: fade 1.5s linear;
+}
+
+@keyframes fade {
+    0% { opacity: 1 }
+    100% { opacity:  0}
+  }
