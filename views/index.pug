@@ -4,8 +4,8 @@ block pageTitle
     ="LLLC Keno"
 
 block content
-    #board.bg-red(style="height: 100vh;")
-        .row(style="height: 5vh;")
+    #board.bg-red(style="height: 100vh; width: 100vw;")
+        .row(style="height: 3.5vh;")
         .row(style="height: 10vh;")
             .col-1
             each num in Array.apply(null, {length: 10}).map((n, idx) => (idx + 1))
@@ -36,14 +36,17 @@ block content
             .col-1
         .row.mt-1(style="height: 10vh;")
             .col-1
-            .col-3.bg-gradient
-                img.d-block.mt-1(src="/images/keno-logo.png" style="height: 8vh;")
-            .col-3.bg-gradient
-                small Current Draw 
-                h3#current_draw
-            .col-4.text-right.bg-gradient
-                small Next Draw 
-                h3#next_draw 3:30
+            .col-1.bg-gradient.px-1
+                img.d-block.mt-3(src="/images/keno-logo.png" style="width:100%;")
+            .col-2.bg-gradient.px-2
+                span(style="font-weight: 800; font-size: 3.75vh;") Current Draw 
+                h3(style="font-weight: 800; font-size: 3.75vh;")#current_draw
+            .col-5.bg-gradient.px-0
+                span(style="font-weight: 800; font-size: 3.75vh;")#last_draw Last Draw
+                h3(style="font-weight: 800; font-size: 2.4vh;")#last_winners
+            .col-2.text-right.bg-gradient
+                span(style="font-weight: 800; font-size: 3.75vh;") Next Draw 
+                h3(style="font-weight: 800; font-size: 3.75vh;")#next_draw 3:30
             .col-1
         .row(style="height: 10vh;")
             .col-1
@@ -78,36 +81,59 @@ block content
         span.d-block.bg-white.border.border-danger.text-danger.text-center.font-weight-bold(style="height: 80vh; width: 80vh; margin-top: 10vh; margin-left: calc(50vw - 40vh); border-radius: 50%; border-width: 20px !important; font-size: 50vh;")
     script.
         var next_draw_counter = 210000;
-        var draw_counter = 30000;
+        var draw_counter = 60000;
+        var draws = {last: {id: "", winners: []}, current: {id: "", winners: []}};
+        var current_draw = !{last_draw};
 
-        function setCurrentDraw() {
-            var current_draw = Math.floor(Date.now() / 1000);
+        function setCurrentDraw(winners) {
+            draws.last.id = draws.current.id;
+            draws.last.winners = draws.current.winners;
+            current_draw = current_draw + 1;
             document.querySelector('#current_draw').innerText = current_draw;
+            draws.current.id = current_draw;
+            draws.current.winners = winners;
+            document.querySelector('#last_draw').innerText = `Last Draw: ${draws.last.id}`;
+            document.querySelector('#last_winners').innerText = draws.last.winners.sort().join("  ");
         }
 
-        function draw() {
+        async function draw() {
+            var top20 = await get20();
+            console.log(top20);
             var usedIndexes = new Set();
-            var winners = Array.apply(null, {length: 10}).map(n => {
-                return getUniqueRandomNumber(80, 1);
+            var winners = Array.apply(null, {length: 20}).map(n => {
+                return getUniqueRandomNumber(81, 1);
             });
             console.log(winners);
             clearChosen();
-            setCurrentDraw();
+            setCurrentDraw(winners);
 
+            saveDraw(current_draw, winners);
+            
             winners.map((n, idx) => {
                 setTimeout(function() {
                     var cell = document.querySelector('div[data-number="' + n + '"]');
                     var ball = document.querySelector('#ball');
-                    cell.classList.add("chosen");
+                    cell.classList.remove("bg-white");
+                    if (top20 && top20.includes && top20.includes(n)) {
+                        // The drawn number is a top 20 number
+                        cell.classList.add("top20");
+                    } else {
+                        cell.classList.add("chosen");
+                    }
                     ball.querySelector('span').innerText = n;
                     ball.classList.remove('d-none');
-                    if (idx === 9) {
+                    ball.classList.add(`shrink-${n}`);
+                    updateCount(n);
+                    setTimeout(function() {
+                        ball.classList.remove(`shrink-${n}`);
+                    }, 3000)
+                    if (idx === 19) {
                         // Last One
                         setTimeout(function() {
                             ball.classList.add('d-none');
-                        }, 2000);
+                        }, 3000);
                     }
-                }, idx * 2000);
+                }, idx * 3000);
             });
 
             function getUniqueRandomNumber(max, min = 0) {
@@ -126,6 +152,8 @@ block content
             var list = document.querySelectorAll('.chosen');
             [...list].forEach(el => {
                 el.classList.remove("chosen");
+                el.classList.remove("top20");
+                el.classList.add("bg-white");
             })
         }
         
@@ -136,8 +164,8 @@ block content
                 if (draw_counter === 0) {
                     // Start the next_draw counter again
                     next_draw_counter = 210000;
-                    draw_counter = 30000;
-                } else if (draw_counter === 30000) {
+                    draw_counter = 60000;
+                } else if (draw_counter === 60000) {
                     // Run the draw command
                     draw();
                     draw_counter = draw_counter - 1000;
@@ -151,3 +179,81 @@ block content
             var seconds = (next_draw_counter / 1000) % 60;
             document.querySelector('#next_draw').innerText = `${Math.floor((next_draw_counter / 1000) / 60)}:${seconds < 10 ? "0" + seconds : seconds}`;
         }, 1000);
+
+
+        async function get20() {
+            try {
+                const response = await fetch(`/top20`, {
+                    method: 'GET'
+                });
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error(error);
+            }
+        }
+        
+        function updateCount(num) {
+            fetch(`/counter?num=${num}`, {
+                method: 'POST', // or 'PUT'
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({}),
+            })
+            .then((response) => response.json())
+            .then((data) => {
+                //- console.log('Success:', data);
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+        }
+
+        function generateStyles() {
+            const stylesheet = document.styleSheets[0];
+            const h = window.innerHeight / 2;
+            const w = window.innerWidth / 2;
+            console.log(h, w);
+            [...Array(80).keys()].map(num => {
+                try {
+                    const n = num+1;
+                    const el = document.querySelector(`[data-number='${n}']`);
+                    const home = getOffset(el);    
+                    //- console.log(home);
+                    stylesheet.insertRule(`.shrink-${n} { transition-property: -moz-transform; transition-duration: 1s; animation-name: grow-${n}; animation-duration: 3s; animation-iteration-count: infinite; animation-timing-function: linear; }`, 0);
+                    stylesheet.insertRule(`@keyframes grow-${n} { 0% { transform:scale(1) translateX(0) translateY(0); } 25% { transform:scale(1); } 75% { transform:scale(0.2); } 100% { transform:scale(0.2) translateX(${Math.floor((home.left - w + (w / 6.5)) * 4.2)}px) translateY(${Math.floor((home.top - h + (h / 6.5)) * 4.2)}px); } }`, 0);
+                } catch (err) {
+                    console.log(err);
+                    console.log(n);
+                }
+            });
+        }
+
+        function getOffset(el) {
+            const rect = el.getBoundingClientRect();
+            return {
+                left: rect.left + window.scrollX,
+                top: rect.top + window.scrollY
+            };
+        }
+
+        generateStyles();
+
+
+        function saveDraw(current_draw, winners) {
+            fetch(`/save-draw?draw=${current_draw}&winners=${winners.join(",")}`, {
+                method: 'POST', // or 'PUT'
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({}),
+            })
+            .then((response) => response.json())
+            .then((data) => {
+                //- console.log('Success:', data);
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+        }
